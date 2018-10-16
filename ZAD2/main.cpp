@@ -36,19 +36,13 @@ int main(int argc, char** argv) {
     }
 
 
-    //bool *table = new bool[maxval+1];
-
-    //for(int j=0;j<=maxval;j++)
-    //    tab[j][0]=true;
-
-
     int i,j;
     int sqr=sqrt(maxval);
     begin_time = omp_get_wtime();
     #pragma omp parallel for default(shared) private(i,j) num_threads(threadsCount) schedule(runtime)
     for (i=2;i<=sqr;i++) {
         for (j = 0; j <tab.size(); j++) {
-                if((tab[j].value%i==0)&(tab[j].value!=2))
+                if((tab[j].value%i==0)&(tab[j].value!=i))
                     tab[j].prime=false;
         }
     }
@@ -58,7 +52,7 @@ int main(int argc, char** argv) {
     cout<<"time: "<<total_time<<endl;
 
 
-/*
+
     for (i=0;i<tab.size();i++)
         if(tab[i].prime==true)
             cout<<tab[i].value<<":prime"<<endl;
@@ -66,7 +60,7 @@ int main(int argc, char** argv) {
             cout<<tab[i].value<<":composed"<<endl;
 
 
-*/
+
 
 
 }
