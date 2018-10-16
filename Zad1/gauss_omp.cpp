@@ -91,10 +91,11 @@ int SumMask = 52;
 	}
 	gettimeofday(&end, NULL);
 
+	//czas ktory uplynal
 	sec = end.tv_sec - start.tv_sec;
 	usec = end.tv_usec - start.tv_usec;
 	cout << "Czas: " << (((sec) * 1000 + usec / 1000) + 0.5) << "ms" << endl;
-
+	//zapis obrazka
 	imwrite(imgOutName, imgScore);
 	return 0;
 }
