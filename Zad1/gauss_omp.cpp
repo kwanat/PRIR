@@ -28,15 +28,19 @@ int main(int argc, char **argv)
 {
 	int column, row, R, G, B, x, y;
     int mask[5][5] = {{1,1,2,1,1},
-                        {1,2,4,2,1},
-                        {2,4,8,4,2},
-                        {1,2,4,2,1},
-					  	{1,1,2,1,1}
-					 }; 
+                    				    {1,2,4,2,1},
+                    				    {2,4,8,4,2},
+                    				    {1,2,4,2,1},
+									  	{1,1,2,1,1}
+					 					}; 
 int SumMask = 52;
 	struct timeval start, end;
 	long sec, usec;
 
+	if(argc!=4){
+		cout << "Must be three arguments" << argc;
+		exit(-1);
+	}
 	int n_thr = atoi(argv[1]);
 	if(n_thr <= 0 || n_thr > 15)
 	{
@@ -92,7 +96,7 @@ int SumMask = 52;
 	//czas ktory uplynal
 	sec = end.tv_sec - start.tv_sec;
 	usec = end.tv_usec - start.tv_usec;
-	cout << "Czas: " << (((sec) * 1000 + usec / 1000) + 0.5) << "ms" << endl;
+	cout << "Czas: " << (((sec) * 1000 + usec / 1000.0) + 0.5) << "ms" << endl;
 	//zapis obrazka
 	imwrite(imgOutName, imgScore);
 	return 0;
