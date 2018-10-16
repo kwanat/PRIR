@@ -27,10 +27,10 @@ int DivSumMask(int value, int SumMask) {
 int main(int argc, char **argv)
 {
 	int column, row, R, G, B, x, y;
-	int mask[5][5] = {{1,1,2,1,1}
-					  	{1,2,4,2,1}
-					  	{2,4,8,4,2}
-					  	{1,2,4,2,1}
+    int mask[5][5] = {{1,1,2,1,1},
+                        {1,2,4,2,1},
+                        {2,4,8,4,2},
+                        {1,2,4,2,1},
 					  	{1,1,2,1,1}
 					 }; 
 int SumMask = 52;
@@ -57,7 +57,7 @@ int SumMask = 52;
 		return -1;
 	}
 
-	int columns = img.columns;
+    int columns = img.cols;
 	int rows = img.rows;
 	Mat imgScore = Mat(rows-4, columns-4, CV_8UC3);
 	//Macierz
@@ -77,16 +77,16 @@ int SumMask = 52;
 			for(x=0; x < 5; x++)
 				for(y=0; y < 5; y++){
 					Vec3b pixelSource = img.at<Vec3b>(startA + x, startB + y);
-					R += pixelSource.values[0] * mask[x][y];
-                    G += pixelSource.values[1] * mask[x][y];
-                    B += pixelSource.values[2] * mask[x][y];
+                    R += pixelSource.val[0] * mask[x][y];
+                    G += pixelSource.val[1] * mask[x][y];
+                    B += pixelSource.val[2] * mask[x][y];
 				}
 			R = R/SumMask;
 			G = G/SumMask;
 			B = B/SumMask;
-			pixelResult.values[0] = R;
-			pixelResult.values[1] = G;
-			pixelResult.values[2] = B;
+            pixelResult.val[0] = R;
+            pixelResult.val[1] = G;
+            pixelResult.val[2] = B;
 		}
 	}
 	gettimeofday(&end, NULL);

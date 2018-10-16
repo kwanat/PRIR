@@ -41,15 +41,15 @@ int main(int argc, char** argv) {
     //for(int j=0;j<=maxval;j++)
     //    tab[j][0]=true;
 
-    begin_time = omp_get_wtime();
 
     int i,j;
     int sqr=sqrt(maxval);
-    #pragma omp parallel for default(shared) private(i,j) num_threads(threadsCount) schedule(static)
+    begin_time = omp_get_wtime();
+    #pragma omp parallel for default(shared) private(i,j) num_threads(threadsCount) schedule(runtime)
     for (i=2;i<=sqr;i++) {
         for (j = 0; j <tab.size(); j++) {
-                if((tab[i].value%i==0)&(tab[i].value!=2))
-                    tab[i].prime=false;
+                if((tab[j].value%i==0)&(tab[j].value!=2))
+                    tab[j].prime=false;
         }
     }
     end_time = omp_get_wtime();
