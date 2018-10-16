@@ -48,7 +48,6 @@ int SumMask = 52;
 	//Wczytanie i tworzenie obrazka
 	char* imgName = argv[2];
 	char* imgOutName = argv[3];
-
 	Mat img;
 	img = imread(imgName, CV_LOAD_IMAGE_COLOR);
 
@@ -90,7 +89,6 @@ int SumMask = 52;
 		}
 	}
 	gettimeofday(&end, NULL);
-
 	//czas ktory uplynal
 	sec = end.tv_sec - start.tv_sec;
 	usec = end.tv_usec - start.tv_usec;
