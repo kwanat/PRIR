@@ -90,7 +90,6 @@ int SumMask = 52;
 		}
 	}
 	end_time = omp_get_wtime();
-	//czas ktory uplynal
 	total_time = ((end_time - begin_time)*1000);
 	cout << "Czas: " << total_time << " ms" << endl;
 	//zapis obrazka
