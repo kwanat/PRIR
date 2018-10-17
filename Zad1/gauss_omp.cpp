@@ -26,12 +26,13 @@ int DivSumMask(int value, int SumMask) {
 int main(int argc, char **argv)
 {
 	int column, row, R, G, B, x, y;
-    int mask[5][5] = {{1,1,2,1,1},
-                    				    {1,2,4,2,1},
-                    				    {2,4,8,4,2},
-                    				    {1,2,4,2,1},
-									  	{1,1,2,1,1}
-					 					}; 
+   	const int mask[5][5] = {			
+   		{1,1,2,1,1},
+        {1,2,4,2,1},
+        {2,4,8,4,2},
+        {1,2,4,2,1},
+  		{1,1,2,1,1}
+	}; 
 int SumMask = 52;
 	double begin_time, end_time, total_time;
 
