@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <omp.h>
-#include <sys/time.h>
 #include "opencv2/imgproc/imgproc.hpp" //pliki naglowkowe OpenCv
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
