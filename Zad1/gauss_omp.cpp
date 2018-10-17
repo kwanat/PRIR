@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   		{1,1,2,1,1}
 	}; 
 int SumMask = 52;
-	double begin_time, end_time, total_time;
+double begin_time, end_time, total_time;
 
 	if(argc!=4){
 		cout << "Niepoprawna liczba oargumentow" << argc;
