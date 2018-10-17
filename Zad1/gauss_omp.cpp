@@ -64,7 +64,7 @@ int SumMask = 52;
 	Mat imgScore = Mat(rows-4, columns-4, CV_8UC3);
 	//Macierz
 	begin_time = omp_get_wtime();
-	#pragma omp parallel for shared(img, imgScore) firstprivate(mask, SumMask) private(x, y , column, row) num_threads(n_thr)
+	#pragma omp parallel for shared(img, imgScore) firstprivate(mask, SumMask) private(x, y , column, row, R, G, B) num_threads(n_thr)
 	for(row = 2; row < rows-2; row++)
 	{
 		for(column = 2; column < columns-2; column++)
