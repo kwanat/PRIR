@@ -8,18 +8,18 @@
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace std;
-using namespace cv; //przestrzen nazw OpenCb
+using namespace cv; //przestrzen nazw OpenCv
 
 int DivSumMask(int value, int SumMask) {
 
 	value = value/SumMask;
-	if(value < 0)
-	{
-		value = 0;
-	}
 	if(value > 255)
 	{
 		value = 255;
+	}
+	if(value < 0)
+	{
+		value = 0;
 	}
 	return value;
 }
@@ -34,17 +34,16 @@ int main(int argc, char **argv)
 									  	{1,1,2,1,1}
 					 					}; 
 int SumMask = 52;
-	struct timeval start, end;
-	long sec, usec;
+	double begin_time, end_time, total_time;
 
 	if(argc!=4){
-		cout << "Must be three arguments" << argc;
+		cout << "Niepoprawna liczba oargumentow" << argc;
 		exit(-1);
 	}
 	int n_thr = atoi(argv[1]);
 	if(n_thr <= 0 || n_thr > 15)
 	{
-		cout << "Number of core must be correct and not fewer than 16";
+		cout << "Numer watku musi byc poprawny i mniejszy niz 16";
 		exit(-1);
 	}
 	
@@ -56,7 +55,7 @@ int SumMask = 52;
 	img = imread(imgName, CV_LOAD_IMAGE_COLOR);
 
 	if(!img.data) {
-		cout << "Coudn't load" << imgName;
+		cout << "Nie mozna wczytac" << imgName;
 		return -1;
 	}
 
@@ -64,12 +63,11 @@ int SumMask = 52;
 	int rows = img.rows;
 	Mat imgScore = Mat(rows-4, columns-4, CV_8UC3);
 	//Macierz
-	gettimeofday(&start, NULL);
-	omp_set_dynamic(0);
+	begin_time = omp_get_wtime();
 	#pragma omp parallel for shared(img, imgScore) firstprivate(mask, SumMask) private(x, y , column, row) num_threads(n_thr)
-	for(row = 2; rows-2 > row; row++)
+	for(row = 2; row < rows-2; row++)
 	{
-		for(column = 2; columns-2 > column; column++)
+		for(column = 2; column < columns-2; column++)
 		{
 			int startA = row -2;
 			int startB = column -2;
@@ -92,11 +90,10 @@ int SumMask = 52;
             pixelResult.val[2] = B;
 		}
 	}
-	gettimeofday(&end, NULL);
+	end_time = omp_get_wtime();
 	//czas ktory uplynal
-	sec = end.tv_sec - start.tv_sec;
-	usec = end.tv_usec - start.tv_usec;
-	cout << "Czas: " << (((sec) * 1000 + usec / 1000.0) + 0.5) << "ms" << endl;
+	total_time = ((end_time - begin_time)*1000);
+	cout << "Czas: " << total_time << " ms" << endl;
 	//zapis obrazka
 	imwrite(imgOutName, imgScore);
 	return 0;
