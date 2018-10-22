@@ -11,7 +11,16 @@ using namespace cv; //przestrzen nazw OpenCv
 
 MPI_Comm comm;
 
+const int mask[5][5] = {			//druga wersja filtru dolnoprzepustowego wykorzystującego funkcję Gaussa 
+   				{1,1,2,1,1},
+    		    {1,2,4,2,1},
+    		    {2,4,8,4,2},
+    		    {1,2,4,2,1},
+  				{1,1,2,1,1}
+				}; 
+int SumMask = 52; //suma liczb w filtrze
 Mat Gaussianblur(Mat img, Mat imgScore){
+int column, row, R, G, B, x, y;
     int columns = img.cols;  //oblicza liczbe kolumn w obrazku
 	int rows = img.rows;	//oblicza liczbe wierszy w obrazku
 	
@@ -43,19 +52,12 @@ return imgScore;
 
 int main(int argc, char **argv)
 {
-	int column, row, R, G, B, x, y;
+	
 int rank, size;
-   	const int mask[5][5] = {			//druga wersja filtru dolnoprzepustowego wykorzystującego funkcję Gaussa 
-   				{1,1,2,1,1},
-    		    {1,2,4,2,1},
-    		    {2,4,8,4,2},
-    		    {1,2,4,2,1},
-  				{1,1,2,1,1}
-				}; 
-int SumMask = 52; //suma liczb w filtrze
+   	
 	double begin_time, end_time, total_time; //zmienne wykorzystywane do zliczania czasu dzialania programu
 
-MPI_Init(&argc &argv);
+MPI_Init(&argc, &argv);
 comm=MPI_COMM_WORLD;
 MPI_Comm_rank(comm, &rank);
 MPI_Comm_size(comm, &size);
@@ -77,17 +79,17 @@ MPI_Comm_size(comm, &size);
 	char* imgOutName = argv[3];
 	Mat img;
 	img = imread(imgName, CV_LOAD_IMAGE_COLOR);
-Mat imgScore = Mat(rows, columns, CV_8UC3); // CV_8UC3 - 8-bit unsigned integer matrix/image with 3 channels
+Mat imgScore = Mat(img.rows, img.cols, CV_8UC3); // CV_8UC3 - 8-bit unsigned integer matrix/image with 3 channels
 
 	if(!img.data) {										// sprawdzdenie czy wejściowy obrazek istnieje
 		cout << "Nie mozna wczytac" << imgName; 
 		return -1;
 	}
 
-	begin_time = omp_get_wtime(); //rozpoczecie liczenia czasu
+	begin_time = MPI_Wtime(); //rozpoczecie liczenia czasu
 imgScore=Gaussianblur(img,imgScore);
 
-	end_time = omp_get_wtime(); // zakonczenie liczenia czasu
+	end_time = MPI_Wtime(); // zakonczenie liczenia czasu
 	total_time = ((end_time - begin_time)*1000); // przeksztalcenie otrzymanego czasu do postaci ms
 	cout << "Czas: " << total_time << " ms" << endl; //wyświetlanie czasu
 	
