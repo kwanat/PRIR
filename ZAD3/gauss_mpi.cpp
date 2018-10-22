@@ -61,6 +61,7 @@ MPI_Init(&argc, &argv);
 comm=MPI_COMM_WORLD;
 MPI_Comm_rank(comm, &rank);
 MPI_Comm_size(comm, &size);
+if(rank==0){
 
 	if(argc!=4){
 		cout << "Niepoprawna liczba oargumentow" << argc; //sprawdzenie ilosci argumentow podanych przy wywolaniu programu
@@ -72,27 +73,87 @@ MPI_Comm_size(comm, &size);
 		cout << "Liczba procesow musi byc wieksza niz 1";
 		exit(-1);
 	}
+
+if(!img.data) {										// sprawdzdenie czy wejściowy obrazek istnieje
+		cout << "Nie mozna wczytac" << imgName; 
+		return -1;
+	}
 	
 
 	//Wczytanie i tworzenie obrazka
 	char* imgName = argv[2]; 
 	char* imgOutName = argv[3];
-	Mat img;
+	Mat img,slice;
 	img = imread(imgName, CV_LOAD_IMAGE_COLOR);
-Mat imgScore = Mat(img.rows, img.cols, CV_8UC3); // CV_8UC3 - 8-bit unsigned integer matrix/image with 3 channels
+	copyMakeBorder(img, img, 2, 2, 2, 2, BORDER_REPLICATE);
 
-	if(!img.data) {										// sprawdzdenie czy wejściowy obrazek istnieje
-		cout << "Nie mozna wczytac" << imgName; 
-		return -1;
-	}
+Mat imgScore = Mat(img.rows-4, 1, CV_8UC3); // CV_8UC3 - 8-bit unsigned integer matrix/image with 3 channels
+int start=0, width,end;
+width=end=img.cols/(n_thr-1)+2;
+width+=2;
+begin_time = MPI_Wtime(); //rozpoczecie liczenia czasu
+for (int i=1;i<n_thr;i++){ //rozeslanie obrazka do procesow
+	if(i==(n_thr-1)
+		end = img.cols;
+	slice = Mat(width, img.rows,CV_8UC3);
+	slice = img(Rect(start,0,end,img.cols)).clone();
+	start=end-2;
+	end=start+width;
+//ROZESLANIE OBRAZKA
 
-	begin_time = MPI_Wtime(); //rozpoczecie liczenia czasu
-imgScore=Gaussianblur(img,imgScore);
+int sliceColumn=slice.cols;
+int sliceRows=slice.rows;
+MPI_Send(sliceColumn, sizeof(int), MPI_LONG, i, 0, comm);
+MPI_Send(sliceRows, sizeof(int), MPI_LONG, i, 1, comm);
+MPI_Send(slice.data, sliceColumn*sliceRows*3, MPI_BYTE, i, 2, comm);
+}
 
-	end_time = MPI_Wtime(); // zakonczenie liczenia czasu
+
+
+//ODEBRANIE OBRAZKA
+
+for (int i=1;i<n_thr;i++)
+{
+	int tempcols,temprows;
+	MPI_Recv(&tempcols, sizeof(int), MPI_LONG, i, 0, comm, MPI_STATUS_IGNORE);
+	MPI_Recv(&temprows, sizeof(int), MPI_LONG, i, 1, comm, MPI_STATUS_IGNORE);
+	Mat tempimg = Mat(temprows, tempcols,CV_8UC3);
+MPI_Recv(tempimg.data, tempcols*temprows*3, MPI_BYTE, i, 2, comm, MPI_STATUS_IGNORE);
+hconcat(imgScore,tempimg,imgScore);
+
+
+end_time = MPI_Wtime(); // zakonczenie liczenia czasu
 	total_time = ((end_time - begin_time)*1000); // przeksztalcenie otrzymanego czasu do postaci ms
 	cout << "Czas: " << total_time << " ms" << endl; //wyświetlanie czasu
 	
 	imwrite(imgOutName, imgScore); //zapis obrazka
+}else{
+//INNE WATKI
+
+//ODEBRANIE DANYCH
+int proccols, procrows;
+MPI_Recv(&proccols, sizeof(int), MPI_LONG, 0, 0, comm, MPI_STATUS_IGNORE);
+	MPI_Recv(&procrows, sizeof(int), MPI_LONG, 0, 1, comm, MPI_STATUS_IGNORE);
+	Mat procimg = Mat(procrows, proccols,CV_8UC3);
+	Mat outimg = Mat(procrows, proccols,CV_8UC3);
+MPI_Recv(procimg.data, proccols*procrows*3, MPI_BYTE, 0, 2, comm, MPI_STATUS_IGNORE);
+
+//FILTR GAUSSA
+outimg=Gaussianblur(procimg,outimg);
+Mat sendimg = Mat(procrows-4, proccols-4,CV_8UC3);
+//WYSLANIE DANYCH
+sendimg=outimg(Rect(2,2,outimg.cols-2,img.rows-2)).clone();
+
+MPI_Send(proccols-4, sizeof(int), MPI_LONG, 0, 0, comm);
+MPI_Send(procrows-4, sizeof(int), MPI_LONG, 0, 1, comm);
+MPI_Send(sendimg.data, (proccols-4)*(procrows-4)*3, MPI_BYTE, 0, 2, comm);
+
+
+
+
+	
+imgScore
+}
+	MPI_Finalize();	
 	return 0;
 }
