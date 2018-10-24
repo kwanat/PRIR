@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
         if (size <= 1) { //Zbyt mała liczba procesow
             cout << "Za mala liczba procesow" << endl;
             MPI_Finalize();
-            exit(1);
+            exit(-1);
         }
 
         //Wczytanie i tworzenie obrazka
