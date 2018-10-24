@@ -50,7 +50,7 @@ Mat Gaussianblur(Mat img, Mat imgScore) {
 
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
     int rank, size;
 
@@ -65,43 +65,50 @@ int main(int argc, char** argv) {
         if (argc != 3) {
             cout << "Niepoprawna liczba oargumentow"
                  << argc; //sprawdzenie ilosci argumentow podanych przy wywolaniu programu
+            MPI_Finalize();
             exit(-1);
+        }
+        if (size <= 1) {
+            cout << "Za mala liczba procesow" << endl;
+            MPI_Finalize();
+            exit(1);
         }
 
         //Wczytanie i tworzenie obrazka
-        char *imgName = argv[2];
-        char *imgOutName = argv[3];
-        Mat img, slice;
+        char *imgName = argv[1];
+        char *imgOutName = argv[2];
+        Mat img, slice, imgScore;
         img = imread(imgName, CV_LOAD_IMAGE_COLOR);
-	cout<<"img: "<<img.cols<<" "<<img.rows<<endl<<endl;
-	cout<<img.data<<endl<<endl;
+        cout << "img: " << img.cols << " " << img.rows << endl << endl;
         if (!img.data) {                                        // sprawdzdenie czy wejściowy obrazek istnieje
             cout << "Nie mozna wczytac" << imgName;
+            MPI_Finalize();
             return -1;
         }
         copyMakeBorder(img, img, 2, 2, 2, 2, BORDER_REPLICATE);
 
-        Mat imgScore = Mat(img.rows - 4, img.cols-4, CV_8UC3); // CV_8UC3 - 8-bit unsigned integer matrix/image with 3 channels
+//        Mat imgScore = Mat(img.rows - 4, img.cols-4, CV_8UC3); // CV_8UC3 - 8-bit unsigned integer matrix/image with 3 channels
         int start = 0, width, end;
         width = end = img.cols / (size - 1) + 2;
         width += 2;
+
         begin_time = MPI_Wtime(); //rozpoczecie liczenia czasu
         for (int i = 1; i < size; i++) { //rozeslanie obrazka do procesow
             if (i == (size - 1))
-                end = img.cols;
+                width = img.cols - start;
             slice = Mat(width, img.rows, CV_8UC3);
-            slice = img(Rect(start, 0, end, img.rows)).clone();
-            start = end - 2;
+            slice = img(Rect(start, 0, width, img.rows)).clone();
+            start = end - 4;
             end = start + width;
 //ROZESLANIE OBRAZKA
 
             int sliceColumn = slice.cols;
             int sliceRows = slice.rows;
-cout<<"wymiary slice: "<<sliceColumn<<" "<<sliceRows<<endl;
-            MPI_Send(&sliceColumn, sizeof(int), MPI_LONG, i, 0, comm);
-            MPI_Send(&sliceRows, sizeof(int), MPI_LONG, i, 1, comm);
+            cout << "wymiary slice: " << sliceColumn << " " << sliceRows << endl;
+            MPI_Send(&sliceColumn, 1, MPI_INT, i, 0, comm);
+            MPI_Send(&sliceRows, 1, MPI_INT, i, 1, comm);
             MPI_Send(slice.data, sliceColumn * sliceRows * 3, MPI_BYTE, i, 2, comm);
-	cout<<"obraz wyslany do procesu: "<<i<<endl;
+            cout << "obraz wyslany do procesu: " << i << endl;
         }
 
 
@@ -110,56 +117,55 @@ cout<<"wymiary slice: "<<sliceColumn<<" "<<sliceRows<<endl;
 
         for (int i = 1; i < size; i++) {
             int tempcols, temprows;
-            MPI_Recv(&tempcols, sizeof(int), MPI_LONG, i, 0, comm, MPI_STATUS_IGNORE);
-cout<<"dziala 1"<<endl;
-            MPI_Recv(&temprows, sizeof(int), MPI_LONG, i, 1, comm, MPI_STATUS_IGNORE);
-cout<<"dziala 2"<<endl<<tempcols<<" "<<temprows<<endl;           
- Mat tempimg = Mat(temprows, tempcols, CV_8UC3);
+            MPI_Recv(&tempcols, 1, MPI_INT, i, 0, comm, MPI_STATUS_IGNORE);
+            MPI_Recv(&temprows, 1, MPI_INT, i, 1, comm, MPI_STATUS_IGNORE);
+            Mat tempimg = Mat(temprows, tempcols, CV_8UC3);
             MPI_Recv(tempimg.data, tempcols * temprows * 3, MPI_BYTE, i, 2, comm, MPI_STATUS_IGNORE);
-cout<<"dziala 3"<<" "<<tempimg.cols<<" "<<tempimg.rows<<" "<<tempimg.data<<endl;        
-imgScore=tempimg;   
-//imwrite(imgOutName, tempimg); //zapis obrazka
-// hconcat(imgScore, tempimg, imgScore);
-cout<<"obraz odebrany od: "<<i<<endl;
+            if (i == 1) {
+                imgScore = tempimg.clone();
+            } else {
+                hconcat(imgScore, tempimg, imgScore);
+            }
+            cout << "rozmiar obrazu po " << i << " odbiorach wynosi: " << imgScore.cols << " " << imgScore.rows << endl;
+            cout << "obraz odebrany od: " << i << endl;
         }
 
 
-            end_time = MPI_Wtime(); // zakonczenie liczenia czasu
-            total_time = ((end_time - begin_time) * 1000); // przeksztalcenie otrzymanego czasu do postaci ms
-            cout << "Czas: " << total_time << " ms" << endl; //wyświetlanie czasu
+        end_time = MPI_Wtime(); // zakonczenie liczenia czasu
+        total_time = ((end_time - begin_time) * 1000); // przeksztalcenie otrzymanego czasu do postaci ms
+        cout << "Czas: " << total_time << " ms" << endl; //wyświetlanie czasu
 
-            imwrite(imgOutName, img); //zapis obrazka
-        }else{
+        imwrite(imgOutName, imgScore); //zapis obrazka
+    } else {
 //INNE WATKI
 
 //ODEBRANIE DANYCH
-            int proccols, procrows;
-            MPI_Recv(&proccols, sizeof(int), MPI_LONG, 0, 0, comm, MPI_STATUS_IGNORE);
-            MPI_Recv(&procrows, sizeof(int), MPI_LONG, 0, 1, comm, MPI_STATUS_IGNORE);
-            Mat procimg = Mat(proccols, procrows, CV_8UC3);
-            Mat outimg = Mat(proccols, procrows, CV_8UC3);
-cout<<"get: "<<proccols<<" "<<procrows<<endl;
-            MPI_Recv(procimg.data, proccols * procrows * 3, MPI_BYTE, 0, 2, comm, MPI_STATUS_IGNORE);
-cout<<"obraz odebrany przez proces: "<<rank<<endl;
+        int proccols, procrows;
+        MPI_Recv(&proccols, 1, MPI_INT, 0, 0, comm, MPI_STATUS_IGNORE);
+        MPI_Recv(&procrows, 1, MPI_INT, 0, 1, comm, MPI_STATUS_IGNORE);
+
+        Mat procimg = Mat(procrows, proccols, CV_8UC3);
+        Mat outimg = Mat(procrows, proccols, CV_8UC3);
+
+        MPI_Recv(procimg.data, proccols * procrows * 3, MPI_BYTE, 0, 2, comm, MPI_STATUS_IGNORE);
+        cout << "obraz odebrany przez proces: " << rank << endl;
+
 //FILTR GAUSSA
-            outimg = Gaussianblur(procimg, outimg);
-cout<<"procimg: "<<procimg.cols<<" "<<procimg.rows<<endl;
-cout<<"blur: "<<outimg.cols<<" "<<outimg.rows<<endl;
-cout<<"obraz rozmyty przez proces: "<<rank<<endl;
-            Mat sendimg = Mat(procrows - 4, proccols - 4, CV_8UC3);
+        outimg = Gaussianblur(procimg, outimg);
+
+        Mat sendimg = Mat(procrows - 4, proccols - 4, CV_8UC3);
 //WYSLANIE DANYCH
 
-            sendimg = outimg(Rect(2, 2, outimg.cols - 4, outimg.rows - 4)).clone();
-	proccols-=4;
-	procrows-=4; 
-cout<<"sending: "<<proccols<<" "<<procrows<<endl;
-cout<<"sending: "<<sendimg.cols<<" "<<sendimg.rows<<endl;
-            MPI_Send(&proccols, sizeof(int), MPI_LONG, 0, 0, comm);
-            MPI_Send(&procrows, sizeof(int), MPI_LONG, 0, 1, comm);
-            MPI_Send(sendimg.data, proccols  * procrows  * 3, MPI_BYTE, 0, 2, comm);
+        sendimg = outimg(Rect(2, 2, outimg.cols - 4, outimg.rows - 4)).clone();
+        proccols -= 4;
+        procrows -= 4;
+
+        MPI_Send(&proccols, 1, MPI_INT, 0, 0, comm);
+        MPI_Send(&procrows, 1, MPI_INT, 0, 1, comm);
+        MPI_Send(sendimg.data, proccols * procrows * 3, MPI_BYTE, 0, 2, comm);
 
 
-        }
-        MPI_Finalize();
-        return 0;
     }
+    MPI_Finalize();
+    return 0;
+}
