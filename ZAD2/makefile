@@ -1,2 +1,3 @@
-primes_omp: primes_omp.cpp
-	g++ -fopenmp -Wall primes_omp.cpp -o primes_omp 
+gauss_mpi: gauss_mpi.cpp
+	mpic++ -Wall gauss_mpi.cpp -o gauss_mpi `pkg-config --cflags --libs opencv`
+ 
