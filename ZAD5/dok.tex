@@ -47,7 +47,7 @@
   basicstyle=\footnotesize,
   identifierstyle=\color{magenta},
   keywordstyle=\color[rgb]{0,0,1},
-  commentstyle=\color{Darkgreen},
+  commentstyle=\color{green},
   stringstyle=\color{red}
   }
 
@@ -60,46 +60,78 @@ Grupa 6 & Dariusz Szczupak, Kamil Wanat & \ddmmyyyydate\today \tabularnewline
 \end{tabular}
 
 
-\section*{Zadanie 4 - Liczby Pierwsze OpenMP}
+\section*{Zadanie 4 - Liczby Pierwsze MPI}
 
-Zadanie laboratoryjne polegało na zaimplementowaniu programu sprawdzającego czy podane liczby są liczbami pierwszymi, czy złożonymi. Program w swoim działaniu wykorzystuje dyrektywy OpenMP w celu jego zrównoleglenia. Problem został rozwiązany przy pomocy algorytmu "naiwnego". Jest metoda nieco wolniesza niż metody probabilistyczne, jednak dające zdecydowanie lepsze wyniki. Polega ona na dzieleniu testowanej liczby przez kolejne liczby od 2 do pierwiastka kwadratowego z tejże. W naszym programie podejście naiwne zostało nieco zmodyfikowane. Zamiast sprawdzać dzielniki od 2 do pierwiastka z każdej liczby, znajdujemy najpierw liczbę maksymalną, a następnie testujemy wszystkie liczby przy pomocy dzielnikow od 2 do sqrt(max). Ponadto nie testujemy każdej liczby osobno dla danego dzielnika, lecz cały zbiór. To właśnie pętla odpowiedzialna za sprawdzanie kolejnych dzielników została zrównoreglona w programie. Poniżej znajduje się część zasadnicza programu ukazująca sposób ''odsiewania'' liczb złożonych.
+Zadanie laboratoryjne polegało na zaimplementowaniu programu sprawdzającego czy podane liczby są liczbami pierwszymi, czy złożonymi. Program w swoim działaniu wykorzystuje MPI(Message Passing Interface) - standard przesyłania komunikatów pomiędzy procesami, w celu jego zrównoleglenia. Problem został rozwiązany przy pomocy algorytmu ''naiwnego". Jest to metoda nieco wolniesza niż metody probabilistyczne, jednak dająca zdecydowanie lepsze wyniki. Polega ona na dzieleniu testowanego elementu przez kolejne liczby od 2 do pierwiastka kwadratowego z tejże. W naszym programie podejście naiwne zostało nieco zmodyfikowane. Zamiast sprawdzać dzielniki od 2 do pierwiastka z każdej liczby, znajdujemy najpierw liczbę maksymalną, a następnie testujemy wszystkie liczby przy pomocy dzielnikow od 2 do sqrt(max). Ponadto nie testujemy każdej liczby osobno dla danego dzielnika, lecz cały zbiór. 
 
 \begin{lstlisting}
-#pragma omp parallel for default(shared) private(i,j) num_threads(threadsCount) schedule(runtime)
-    for (i=2;i<=sqr;i++) {			
-        for (j = 0; j <d; j++) {		
-                if((tab[j].value%i==0)&(tab[j].value!=i)) 
-                    tab[j].prime=false;
+for (int i = 1; i < size; i++) {   
+            if (i == (size - 1))             
+                end = tab.size();
+            vector <number> templateTable(tab.begin() + begin, tab.begin() + end);       
+            begin = end;                                                                 
+            end += step;
+
+            uint tableSize = templateTable.size();                                       
+            MPI_Send(&tableSize, 1, MPI_INT, i, 0, comm);                               
+            MPI_Send(&sqr, 1, MPI_INT, i, 1, comm);                                     
+            MPI_Send(templateTable.data(), tableSize, myType, i, 2, comm);              
         }
-    }
+        vector <number> tab2;         
+        vector <number> concatTable;
+for (int i = 1; i < size; i++) {    
+
+            MPI_Recv(&d, 1, MPI_INT, i, 0, comm, MPI_STATUS_IGNORE);                    
+            tab2.resize(d);                                                             
+            MPI_Recv(tab2.data(), d, myType, i, 1, comm, MPI_STATUS_IGNORE);            
+            concatTable.insert(concatTable.end(), tab2.begin(), tab2.end());            
+        }
 \end{lstlisting}
 
 
-Powyższy kod rozpoczyna się od definicji dyrektywy zrównoleglającej pętle for. Domyślnie wszystkie zmienne wykorzystywane wewnątrz pętli ustawione są jako współdzielone. Nie dotyczy to zmiennych sterujących pętlą które zostały zadeklarowane jako prywatne. Kolejny przełącznik określa liczbę wątków z których ma kozystać program podczas równoległego przetwarzania. Schedule natomiast określa sposób zrównoleglania pętli. Do celów testowych zastosowano przełączniki: static, dynamic oraz runtime. Ostatecznie to przełącznik runtime okazał sie najbardziej optymalny w przypadku problemu liczb pierwszych. Pętla zewnętrzna iterowana jest od wartości 2 aż do pierwiastka kwadratowego z liczby maksymalnej wczytanego zbioru testowego. Gwarantuje to sprawdzenie wszystkich możliwych dzielników dla całego zakresyu liczb testowanych. Pętla wewnętrzna iterowana od 0 do ilości liczb testowych odpowiedzialna jest za poruszanie się po zbiorze testowym. Nastepnie sprawdzane jest czy liczba obecnie testowana dzieli się przez aktualny dzielnik oraz czy nie jest równa dzielnik. Jesli warunek logiczny zostanie spełniony, liczba uznawana jest za złożoną. W przeciwnym wypadku liczba pozostaje domniemanie pierwsza.
+Powyższy kod źródłowy przedstawia działanie zasadniczej części procesu zerowego (głównego). Jego zadaniem jest podział całego wektora liczb pierwszych na mniejsze podzbiory, a następnie ich rozesłanie do procesów o numerze rank wiekszym niż 0. Odpowedzialna jest za to pierwsza pętla for. Zakres liczb które wchodzą w skład danego podzbioru ustalają zmienne begin oraz end a ich ilość zmienna step. Wycięcie zbioru danych wykonywane jest w konstruktorze wektora templateTable. Do procesów potomnych wysyłane sa trzy wiadomości: pierwsza z rozmiarem wektora danych, druga z wartością pierwiastka do którego testujemy liczby oraz trzecia z danymi zawartymi w wektorze.
+Kolejną częścią programu jest odebranie oraz sklejenie danych z wektorem wynikowym. Program główny oczekuje na odebranie od procesów potomnych dwóch wiadomości: pierwsza z rozmiarem danych oraz druga z dynymi właściwymi zapisanymi do wektora tab2. Następnie dane te są doklejane za pomocą funkcji insert do wektora wynikowego - concatTable.
+Aby możliwe było wysyłanie wektora który zawiera w sobie typ złożony, musieliśmy zarejestrować taki typ w programie. Sposób rejestracji nowego typu MPI przedstawiony jest na poniższym listingu. 
 
+\begin{lstlisting}
+ int lengths[2] = {1, 1};                                                 // ilosc zmiennych w strukturze
+    MPI_Aint offsets[2] = {offsetof(number, value), offsetof(number, prime)};  // przesuniecie bitowe zmiennych struktury
+    MPI_Datatype types[2] = {MPI_LONG,MPI::BOOL};                           // podstawowe typy skladajace sie na nasz typ
+    MPI_Datatype myType;                                                    // deklaracja nowego typu
+    MPI_Type_create_struct(2, lengths, offsets, types, &myType);            // utworzenie nowego typu
+    MPI_Type_commit(&myType);
+\end{lstlisting}
 
 
 \begin{figure}[!hbp]
 	\centering
-  \includegraphics[width=0.7\textwidth]{wykres1.png}
-  \caption{Wykres przyspieszenia}
+  \includegraphics[width=0.7\textwidth]{wykres.png}
+  \caption{Wykres zależności czasu wykonywania od liczby procesów}
 \end{figure}
-Poniższy wykres przedstawia zależność czasu wykonywania się programu od liczby wątków na którym został on uruchomiony. Jak dobrze widać na wykresie czas nie zmniejsza się liniowo wraz ze wzrostem liczby wątków. Spowodowane jest to pewnym narzutem na procesor co prowadzi do zwiększenia czasu wykonywania obliczeń. W przypadku metody podziału danych między wątki "runtime" wykres wygląda bardzo dobrze, czas zmniejsza się wraz ze wzrostem liczby wątków. W każdym przypadku zauważyć można, że od ilości wątków równej 8 czas pozostaje na równym poziomie. Obliczenia wykonywane było na 4-rdzeniowym procesorze obsługującym 8 wątków, przez co dalsze zrównoleglanie nie miało sensu. Procesor nie mógł już przyspieszyć obliczeń. Warty zaznaczenia jest fakt, że od 5 wątku wzwyż czas nie maleją juz tak szybko jak w przypadku wątków 1-4. Powodowane jest to funkcją hyper threadingu procesora. Procesor emuluje użycie większej ilości wątków niż mamy dostępnych rdzeni procesora, należy jednak pamiętać że moc obliczeniowa nie będzie równa tej którą ma fizyczny rdzeń. Ciekawie wykląda wykres dla metody "static" która w przypadku 4 wątków zanotowała lekki wzrost czasu wykonania. To także może zostać wyjaśnione poprzez narzut procesora który zwiększa czas wykonania obliczeń.
+Powyższy wykres przedstawia zależność czasu wykonywania się programu od liczby procesów z jaką został on uruchomiony. Wykres rozpoczyna sie od 2 procesów, ponieważ proces zerowy wykorzystywany jest jedynie do podziału zbioru na mniejsze części, wysłanie danych do procesów oraz ich odebranie i sklejenie. Wobec tego nie jest możliwe uruchomienie programu z parametrem n=1. Jak dobrze widać na wykresie czas nie zmniejsza się liniowo wraz ze wzrostem liczby wątków. Spowodowane jest to wzrostem czasu obliczeń dla procesu zerowego ze względu na większą ilość operacji komunikacji pomiędzy procesem zerowym a procesami potomnymi. Każda z takich operacji zajmuje pewną ilość czasu, tak więc im więcej procesów uruchomimy, tym większy stanie się czas wykonywania operacji wysyłania/odbierania danych. Podobnie jak w przypadku OpenMP najlepszy wynik uzyskujemy dla 8 procesów (tyle ile wątków dostarcza serwer CUDA). Późniejsze zwiększanie ilości procesów zwiększa nam nieznacznie czas wykonania obliczeń. Również tak jak w poprzednich zadaniach widoczny jest pewien moment w którym czas obliczeń jest na stałym poziomie, a następnie znów się zmniejsza. Taka sytuacja występuje dla 6 procesów. Powodowane jest to prawdopodobnie zwiększeniem narzutu na procesor przez większą liczbę komunikatów oraz włączeniem oraz architekturą sewera CUDA (8 wątków przy 4 fizycznych rdzeniach z wykorzystaniem technologii HyperThreading). 
 
 \begin{wrapfigure}{r}{0.5\textwidth}
   \vspace{-20pt}
   \begin{center}
-  \includegraphics[width=0.45\textwidth]{wykres.png}
+  \includegraphics[width=0.45\textwidth]{wykres1.png}
   \end{center}
   \vspace{-20pt}
-  \caption{Wykres zależności czasu od liczby wątków}
+  \caption{Wykres przyspieszenia}
   \vspace{-10pt}
 \end{wrapfigure}
 
 
-Wykres przyspieszenia programu testującego liczby pierwsze pokazuje czy i jak udało się zrównoleglić działanie programu. Z tego wykresu możemy wyciągnąć analogiczne wnioski do tych, które zostały opisane pod wykresem zależności czasu wykonania od ilości wątków procesora. Tutaj również widać spadek przyspieszenia od wątku 5 wzwyż oraz wzrost czasu obliczeń dla 4 wątków w przypadku metody static. 
+Wykres przyspieszenia programu testującego liczby pierwsze pokazuje czy i jak udało się zrównoleglić działanie programu. Z tego wykresu możemy wyciągnąć analogiczne wnioski do tych, które zostały opisane pod wykresem zależności czasu wykonania od ilości wątków procesora. Tutaj również widać spadek przyspieszenia od liczby procesów - 5 wzwyż oraz wzrost czasu obliczeń dla liczby procesów powyżej 8. 
  
-Program został zaimplementowany oraz przetestowany na serwerze cuda.iti.pk.edu.pl. Najlepszą metodą zrównoleglania okazała się metoda runtime która automatycznie dobiera sposób podziału danych pomiędzy wąti w trakcie działania programu. Testy na serwerze zostały wykonane w czasie gdy zaloowany był na nim tylko użytkownik testujący co wykluczyło wpływ procesów innych użytkowników na czas wykonania zadania. Progarm kompiluje się z uzyciem pliku makefile. Zastosowane rozwiązanie jest dokładniejsze niż metody probabilistyczne. Przedstawione wykresy oraz ich interpretacja pozwalają na wnioskowanie, iż rozwiązanie zaproponowane przez nasz zespół jest poprawne.
+Dane przeprowadzanych testów:
+\begin{lista}
+ \item Wzięto pod uwagę średnią pomiarów czasów wykonania programu dla liczby wątków z przedziału od 2 do 13. 
+ Program był uruchamiany dla pliku pobranego z internetu.
+ \item Do mierzenia czasu wykorzystano MPIWtime.
+ \item Testy zostały wykonane na serwerze cuda.iti.pk.edu.pl . 
+ \item W czasie testów na serwerze zalogowany był jedynie użytkownik testujący.
+\end{lista}
+
 
 \end{document}
 
