@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     MPI_Aint offsets[2] = {offsetof(number,value),offsetof(number,prime)};
     MPI_Datatype types[2] = {MPI_LONG,MPI::BOOL};
     MPI_Datatype myType;
-    MPI_Type_struct(2, lengths, offsets, types, &myType);
+    MPI_Type_create_struct(2, lengths, offsets, types, &myType);
     MPI_Type_commit(&myType);
 
     if(rank==0){
@@ -83,14 +83,14 @@ int main(int argc, char** argv) {
     uint d=tab.size();
     MPI_Send(&d, 1, MPI_INT, 1, 0, comm);       // wyslanie liczby wierszy typu int do procesu i
     MPI_Send(&sqr, 1, MPI_INT, 1, 1, comm); 
-    MPI_Send(&tab[0], d,myType, 1, 2, comm);    //wyslanie obrazka jako typu byte
+    MPI_Send(tab.data(), d,myType, 1, 2, comm);    //wyslanie obrazka jako typu byte
 
     vector<number> tab2;
     
     MPI_Recv(&d, 1, MPI_INT, 1, 0, comm, MPI_STATUS_IGNORE); //odebranie liczby wierszy
     //MPI_Datatype myType= register_mpi_type();
     tab2.resize(d);
-    MPI_Recv(&tab[0],d , myType, 1, 1, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
+    MPI_Recv(tab2.data(),d , myType, 1, 1, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
     
     
     
@@ -110,23 +110,22 @@ int main(int argc, char** argv) {
         else
             cout<<tab2[i].value<<": composite"<<endl;
 	  }else{// KONIEC PROCESU 0             
-    vector<number> tab;
+    vector<number> tab3,tab4;
     uint d,sqr;
     
     
     MPI_Recv(&d, 1, MPI_INT, 0, 0, comm, MPI_STATUS_IGNORE); //odebranie liczby wierszy
     MPI_Recv(&sqr, 1, MPI_INT, 0, 1, comm, MPI_STATUS_IGNORE);
     //MPI_Datatype myType= register_mpi_type();
-    tab.resize(d);
-    MPI_Recv(&tab[0],d , myType, 0, 2, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
+    tab3.resize(d);
+    MPI_Recv(tab3.data(),d , myType, 0, 2, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
+	  
+    
+    tab4=primeTesting(tab3,sqr,d); 
 
-    
-    
-    
-    tab=primeTesting(tab,sqr,d); 
-    
+	  
     MPI_Send(&d, 1, MPI_INT, 0, 0, comm);       // wyslanie liczby wierszy typu int do procesu i
-    MPI_Send(&tab[0], d,myType, 0, 1, comm);    //wyslanie obrazka jako typu byte
+    MPI_Send(tab4.data(), d,myType, 0, 1, comm);    //wyslanie obrazka jako typu byte
 
 
 
