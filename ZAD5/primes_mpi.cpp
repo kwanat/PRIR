@@ -81,16 +81,40 @@ int main(int argc, char** argv) {
     begin_time = MPI_Wtime();		//rozpoczecie liczenia czasu
     //MPI_Datatype myType= register_mpi_type();
     uint d=tab.size();
-    MPI_Send(&d, 1, MPI_INT, 1, 0, comm);       // wyslanie liczby wierszy typu int do procesu i
-    MPI_Send(&sqr, 1, MPI_INT, 1, 1, comm); 
-    MPI_Send(tab.data(), d,myType, 1, 2, comm);    //wyslanie obrazka jako typu byte
-
-    vector<number> tab2;
     
-    MPI_Recv(&d, 1, MPI_INT, 1, 0, comm, MPI_STATUS_IGNORE); //odebranie liczby wierszy
+    int begin,end,step;
+    begin=0;
+    step=d/(size-1);
+    end=step;
+    
+    
+    for (int i=1;i<size;i++){
+    
+    if(i==(size-1))
+    end=tab.size();
+    vector<number> templateTable(tab.begin() + begin, tab.begin() + end);
+    begin=end;
+    end+=step;
+    
+    uint tableSize=templateTable.size();
+    MPI_Send(&tableSize, 1, MPI_INT, i, 0, comm);       // wyslanie liczby wierszy typu int do procesu i
+    MPI_Send(&sqr, 1, MPI_INT, i, 1, comm); 
+    MPI_Send(templateTable.data(), tableSize,myType, i, 2, comm);    //wyslanie obrazka jako typu byte
+    }
+    vector<number> tab2;
+    vector<number> concatTable;
+    
+    
+    for (int i=1;i<size;i++){
+    
+    MPI_Recv(&d, 1, MPI_INT, i, 0, comm, MPI_STATUS_IGNORE); //odebranie liczby wierszy
     //MPI_Datatype myType= register_mpi_type();
+    
     tab2.resize(d);
-    MPI_Recv(tab2.data(),d , myType, 1, 1, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
+    
+    MPI_Recv(tab2.data(),d , myType, i, 1, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
+    concatTable.insert(concatTable.end(), tab2.begin(), tab2.end());
+    }
     
     
     
@@ -104,11 +128,11 @@ int main(int argc, char** argv) {
    
 
 
-    for (uint i=0;i<tab2.size();i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
-        if(tab2[i].prime==true)
-            cout<<tab2[i].value<<": prime"<<endl;
+    for (uint i=0;i<concatTable.size();i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
+        if(concatTable[i].prime==true)
+            cout<<concatTable[i].value<<": prime"<<endl;
         else
-            cout<<tab2[i].value<<": composite"<<endl;
+            cout<<concatTable[i].value<<": composite"<<endl;
 	  }else{// KONIEC PROCESU 0             
     vector<number> tab3,tab4;
     uint d,sqr;
@@ -116,24 +140,16 @@ int main(int argc, char** argv) {
     
     MPI_Recv(&d, 1, MPI_INT, 0, 0, comm, MPI_STATUS_IGNORE); //odebranie liczby wierszy
     MPI_Recv(&sqr, 1, MPI_INT, 0, 1, comm, MPI_STATUS_IGNORE);
-    //MPI_Datatype myType= register_mpi_type();
     tab3.resize(d);
     MPI_Recv(tab3.data(),d , myType, 0, 2, comm, MPI_STATUS_IGNORE); // odebranie obrazu wynikowego
-	  
-    
+	
+     
+     
+        
     tab4=primeTesting(tab3,sqr,d); 
-
 	  
     MPI_Send(&d, 1, MPI_INT, 0, 0, comm);       // wyslanie liczby wierszy typu int do procesu i
     MPI_Send(tab4.data(), d,myType, 0, 1, comm);    //wyslanie obrazka jako typu byte
-
-
-
-
-
-
-
-
     }
                 
 
