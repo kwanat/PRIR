@@ -72,7 +72,7 @@ const int mask[5][5] = {            //druga wersja filtru dolnoprzepustowego wyk
  
 int main(int argc, char **argv)
 {
-    int blockNumber = 500;
+    int blockNumber = 500; //cuda cores
     int threadNumber = 1024;
     int threadsCount; //liczba watkow
     cudaEvent_t start, stop; //deklaracja zmiennych licznika
