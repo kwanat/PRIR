@@ -1,9 +1,11 @@
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 # include <iostream>
 # include <fstream>
 # include <cstdlib>
 # include <cmath>
 # include <vector>
-# include "mpi.h"
+
 
 using namespace std;
 

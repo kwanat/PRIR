@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    if (argc != 3) {                //sprawdzenie ilosci argumentow podanych przy wywolaniu programu
+    if (argc != 4) {                //sprawdzenie ilosci argumentow podanych przy wywolaniu programu
         cout << "Niepoprawna liczba oargumentow"<<endl;
         exit(1);
     } 
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         cout << "Liczba rdzeni niepoprawna";
         exit(-1);
     }
-    
+     blockNumber=threadsCount;
     //Load and create image
     char *imgName = argv[2];
     char *imgOutName = argv[3];
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
  
     //Prepare size of image and fragment sizes:
     int rows = img.rows;
-    int columns = img.columns;
+    int columns = img.cols;
     int sizeForBlock = rows / blockNumber;
     int sizeForThread = columns / threadNumber;
    //cout << rows << "  " << columns << "  "<< sizeForBlock <<"  "<< sizeForThread  << endl;
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
     cudaFree(&cudaB);
     cudaFree(&cudaG);
  
-    getchar();
+
  
     return 0;
 }
