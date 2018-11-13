@@ -77,7 +77,6 @@ int main(int argc, char **argv)
     int threadsCount; //liczba watkow
     cudaEvent_t start, stop; //deklaracja zmiennych licznika
     float elapsedTime; 
-    cudaError error;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
@@ -91,7 +90,8 @@ int main(int argc, char **argv)
         cout << "Liczba rdzeni niepoprawna";
         exit(-1);
     }
-     blockNumber=threadsCount;
+
+    blockNumber=threadsCount;
     //Load and create image
     char *imgName = argv[2];
     char *imgOutName = argv[3];
@@ -124,21 +124,21 @@ int main(int argc, char **argv)
     unsigned char* cudaB;
  
     //Load data on GPU memory
-    error = cudaMalloc(&cudaR, rows*columns*sizeof(unsigned char));
-    error = cudaMalloc(&R, (rows)*(columns) * sizeof(unsigned char));
-    error = cudaMemcpy(cudaR, &background[2].data[0], rows*columns * sizeof(unsigned char),cudaMemcpyHostToDevice);
-    error = cudaMalloc(&cudaG, rows*columns * sizeof(unsigned char));
-    error = cudaMalloc(&G, (rows)*(columns) * sizeof(unsigned char));
-    error = cudaMemcpy(cudaG, &background[1].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
-    error = cudaMalloc(&cudaB, rows*columns * sizeof(unsigned char));
-    error = cudaMalloc(&B, (rows)*(columns ) * sizeof(unsigned char));
-    error = cudaMemcpy(cudaB, &background[0].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMalloc(&cudaR, rows*columns*sizeof(unsigned char));
+    cudaMalloc(&R, (rows)*(columns) * sizeof(unsigned char));
+    cudaMemcpy(cudaR, &background[2].data[0], rows*columns * sizeof(unsigned char),cudaMemcpyHostToDevice);
+    cudaMalloc(&cudaG, rows*columns * sizeof(unsigned char));
+    cudaMalloc(&G, (rows)*(columns) * sizeof(unsigned char));
+    cudaMemcpy(cudaG, &background[1].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMalloc(&cudaB, rows*columns * sizeof(unsigned char));
+    cudaMalloc(&B, (rows)*(columns ) * sizeof(unsigned char));
+    cudaMemcpy(cudaB, &background[0].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
  
     //Do calculations
     cudaEventRecord(start);
     gaussianBlur <<< blockNumber, threadNumber >>> (cudaR, cudaG, cudaB, R, G, B, sizeForBlock, sizeForThread, rows-4, columns-4); //uruchomienie jądra
     cudaEventRecord(stop); //zatrzymanie licznika i zczytanie czasu obliczen
-    error = cudaEventSynchronize(stop);
+    cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime, start, stop);
     printf("Czas : %f ms\n", elapsedTime);
  
@@ -151,9 +151,9 @@ int main(int argc, char **argv)
     resultRed = new unsigned char[(rows)*(columns)];
     resultGreen = new unsigned char[(rows)*(columns)];
  
-    error = cudaMemcpy(resultRed,R,(rows)*(columns) * sizeof(unsigned char),cudaMemcpyDeviceToHost);
-    error = cudaMemcpy(resultBlue, B, (rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
-    error = cudaMemcpy(resultGreen, G, (rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(resultRed,R,(rows)*(columns) * sizeof(unsigned char),cudaMemcpyDeviceToHost);
+    cudaMemcpy(resultBlue, B, (rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+    cudaMemcpy(resultGreen, G, (rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
  
     Mat imgResult;
     Mat Red = Mat(rows, columns, CV_8UC1, resultRed);
