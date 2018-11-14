@@ -35,7 +35,7 @@
 \lstset{
     backgroundcolor=\color{lbcolor},
     tabsize=4,
-  language=C++,
+  language=c++,
   captionpos=b,
   tabsize=3,
   frame=lines,
@@ -55,81 +55,86 @@
 
 \noindent
 \begin{tabular}{|c|p{11cm}|c|} \hline 
-Grupa 6 & Dariusz Szczupak, Kamil Wanat & \ddmmyyyydate\today \tabularnewline
+grupa 6 & dariusz szczupak, kamil wanat & \ddmmyyyydate\today \tabularnewline
 \hline 
 \end{tabular}
 
 
-\section*{Zadanie 4 - Liczby Pierwsze MPI}
+\section*{zadanie 4 - liczby pierwsze mpi}
 
-Zadanie laboratoryjne polegało na zaimplementowaniu programu sprawdzającego czy podane liczby są liczbami pierwszymi, czy złożonymi. Program w swoim działaniu wykorzystuje MPI(Message Passing Interface) - standard przesyłania komunikatów pomiędzy procesami, w celu jego zrównoleglenia. Problem został rozwiązany przy pomocy algorytmu ''naiwnego". Jest to metoda nieco wolniesza niż metody probabilistyczne, jednak dająca zdecydowanie lepsze wyniki. Polega ona na dzieleniu testowanego elementu przez kolejne liczby od 2 do pierwiastka kwadratowego z tejże. W naszym programie podejście naiwne zostało nieco zmodyfikowane. Zamiast sprawdzać dzielniki od 2 do pierwiastka z każdej liczby, znajdujemy najpierw liczbę maksymalną, a następnie testujemy wszystkie liczby przy pomocy dzielnikow od 2 do sqrt(max). Ponadto nie testujemy każdej liczby osobno dla danego dzielnika, lecz cały zbiór. 
+zadanie laboratoryjne polegało na zaimplementowaniu programu sprawdzającego czy podane liczby są liczbami pierwszymi, czy złożonymi. program zaimplementowany zostaz wykorzystaniem języka programowania CUDA C umozliwiającego programowanie z wykorzystaniem procesorow graficznych GPU. Problem został rozwiązany przy pomocy algorytmu ''naiwnego". Jest to metoda nieco wolniesza niż metody probabilistyczne, jednak dająca zdecydowanie lepsze wyniki. Polega ona na dzieleniu testowanego elementu przez kolejne liczby od 2 do pierwiastka kwadratowego z tejże. w naszym programie podejście naiwne zostało nieco zmodyfikowane. zamiast sprawdzać dzielniki od 2 do pierwiastka z każdej liczby, znajdujemy najpierw liczbę maksymalną, a następnie testujemy wszystkie liczby przy pomocy dzielnikow od 2 do sqrt(max). ponadto nie testujemy każdej liczby osobno dla danego dzielnika, lecz cały zbiór. 
 
 \begin{lstlisting}
-for (int i = 1; i < size; i++) {   
-            if (i == (size - 1))             
-                end = tab.size();
-            vector <number> templateTable(tab.begin() + begin, tab.begin() + end);       
-            begin = end;                                                                 
-            end += step;
-
-            uint tableSize = templateTable.size();                                       
-            MPI_Send(&tableSize, 1, MPI_INT, i, 0, comm);                               
-            MPI_Send(&sqr, 1, MPI_INT, i, 1, comm);                                     
-            MPI_Send(templateTable.data(), tableSize, myType, i, 2, comm);              
+__global__ void primeTesting (number* tab, uint sqr, uint d)         
+{    
+uint tid=blockIdx.x;                                                                          
+uint i,j;                                                                                     
+for (i=2;i<=sqr;i++) {			
+        for (j = tid; j <d; j+=gridDim.x) {	
+                if((tab[j].value%i==0)&&(tab[j].value!=i)) 
+                    tab[j].prime=false;    
         }
-        vector <number> tab2;         
-        vector <number> concatTable;
-for (int i = 1; i < size; i++) {    
-
-            MPI_Recv(&d, 1, MPI_INT, i, 0, comm, MPI_STATUS_IGNORE);                    
-            tab2.resize(d);                                                             
-            MPI_Recv(tab2.data(), d, myType, i, 1, comm, MPI_STATUS_IGNORE);            
-            concatTable.insert(concatTable.end(), tab2.begin(), tab2.end());            
-        }
+    }                                      
+}
 \end{lstlisting}
 
 
-Powyższy kod źródłowy przedstawia działanie zasadniczej części procesu zerowego (głównego). Jego zadaniem jest podział całego wektora liczb pierwszych na mniejsze podzbiory, a następnie ich rozesłanie do procesów o numerze rank wiekszym niż 0. Odpowedzialna jest za to pierwsza pętla for. Zakres liczb które wchodzą w skład danego podzbioru ustalają zmienne begin oraz end a ich ilość zmienna step. Wycięcie zbioru danych wykonywane jest w konstruktorze wektora templateTable. Do procesów potomnych wysyłane sa trzy wiadomości: pierwsza z rozmiarem wektora danych, druga z wartością pierwiastka do którego testujemy liczby oraz trzecia z danymi zawartymi w wektorze.
-Kolejną częścią programu jest odebranie oraz sklejenie danych z wektorem wynikowym. Program główny oczekuje na odebranie od procesów potomnych dwóch wiadomości: pierwsza z rozmiarem danych oraz druga z dynymi właściwymi zapisanymi do wektora tab2. Następnie dane te są doklejane za pomocą funkcji insert do wektora wynikowego - concatTable.
-Aby możliwe było wysyłanie wektora który zawiera w sobie typ złożony, musieliśmy zarejestrować taki typ w programie. Sposób rejestracji nowego typu MPI przedstawiony jest na poniższym listingu. 
+Powyzszy kod przedstawia funkcję primeTesting uruchamianą na procesorze graficznym GPU. Odpowiedzialna jest ona za testowanie pierwszosci liczb. Jako argument przyjmuje wskaźnik do obszaru pamięci w ktorym znajdują się dane liczb do testowania, pierwiastek z wartosci maksymalnej liczby, oraz rozmiar danych. Kazdy z watkow odpowiada za sprawdzenie czesci liczb domniemanie pierwszych. Liczby do sprawdzenia przez wątek definiowane są  poprzez zmienną tid - początkowo przyjmującą numer bloku, oraz zwiększaną o calkowitą ilosć blokow. Na kolejnym listingu widoczny jest fragment kopiowania danych do pamięci karty graficznej, wywolanie funkcji jądra oraz kopiowanie powrotne danych do pamięci hosta.
 
 \begin{lstlisting}
- int lengths[2] = {1, 1};                                                 // ilosc zmiennych w strukturze
-    MPI_Aint offsets[2] = {offsetof(number, value), offsetof(number, prime)};  // przesuniecie bitowe zmiennych struktury
-    MPI_Datatype types[2] = {MPI_LONG,MPI::BOOL};                           // podstawowe typy skladajace sie na nasz typ
-    MPI_Datatype myType;                                                    // deklaracja nowego typu
-    MPI_Type_create_struct(2, lengths, offsets, types, &myType);            // utworzenie nowego typu
-    MPI_Type_commit(&myType);
+    number* tab2;               
+    number* temp = tab.data();         
+    cudaMalloc( (void**)&tab2, d * sizeof(number) );                     
+    cudaMemcpy(tab2, temp, d * sizeof(number), cudaMemcpyHostToDevice);  
+    primeTesting <<< blockNumber, 1 >>> (tab2, sqr,d);                    
+    number * result;                                                            
+    result= (number *) malloc (d*sizeof(number));                               
+    cudaMemcpy(result, tab2, d * sizeof(number), cudaMemcpyDeviceToHost);       
 \end{lstlisting}
+
+Ponizsza tabela przedstawia zaleznoć przyspieszenia od ilosci blokow wykorzystywanych przez program.
+\begin{table}[!hbp]
+\centering
+\begin{tabular}{|p{5cm}|c|}
+\hline 
+Liczba blokow & Przyspieszenie \tabularnewline
+\hline 
+1	& 1\tabularnewline
+2	& 1,922430365\tabularnewline
+4	& 3,823976317\tabularnewline
+8	& 7,628674784\tabularnewline
+16 &	15,25149128\tabularnewline
+32 &	30,08939713\tabularnewline
+64 &	58,210549\tabularnewline
+128 &	112,8851456\tabularnewline
+256 &	126,3510546\tabularnewline
+512 &	151,0486673\tabularnewline
+1024 &	152,9736427\tabularnewline
+2048 &	164,897505\tabularnewline
+4096 &	164,51219\tabularnewline
+8192 &	164,7069294\tabularnewline
+16384	& 160,7519724\tabularnewline
+\hline
+\end{tabular}
+\caption{Zaleznosć przyspieszenia od ilosci blokow}
+\end{table}
+
 
 
 \begin{figure}[!hbp]
 	\centering
   \includegraphics[width=0.7\textwidth]{wykres.png}
-  \caption{Wykres zależności czasu wykonywania od liczby procesów}
+  \caption{wykres przyspieszenia}
 \end{figure}
-Powyższy wykres przedstawia zależność czasu wykonywania się programu od liczby procesów z jaką został on uruchomiony. Wykres rozpoczyna sie od 2 procesów, ponieważ proces zerowy wykorzystywany jest jedynie do podziału zbioru na mniejsze części, wysłanie danych do procesów oraz ich odebranie i sklejenie. Wobec tego nie jest możliwe uruchomienie programu z parametrem n=1. Jak dobrze widać na wykresie czas nie zmniejsza się liniowo wraz ze wzrostem liczby wątków. Spowodowane jest to wzrostem czasu obliczeń dla procesu zerowego ze względu na większą ilość operacji komunikacji pomiędzy procesem zerowym a procesami potomnymi. Każda z takich operacji zajmuje pewną ilość czasu, tak więc im więcej procesów uruchomimy, tym większy stanie się czas wykonywania operacji wysyłania/odbierania danych. Podobnie jak w przypadku OpenMP najlepszy wynik uzyskujemy dla 8 procesów (tyle ile wątków dostarcza serwer CUDA). Późniejsze zwiększanie ilości procesów zwiększa nam nieznacznie czas wykonania obliczeń. Również tak jak w poprzednich zadaniach widoczny jest pewien moment w którym czas obliczeń jest na stałym poziomie, a następnie znów się zmniejsza. Taka sytuacja występuje dla 6 procesów. Powodowane jest to prawdopodobnie zwiększeniem narzutu na procesor przez większą liczbę komunikatów oraz włączeniem oraz architekturą sewera CUDA (8 wątków przy 4 fizycznych rdzeniach z wykorzystaniem technologii HyperThreading). 
-
-\begin{wrapfigure}{r}{0.5\textwidth}
-  \vspace{-20pt}
-  \begin{center}
-  \includegraphics[width=0.45\textwidth]{wykres1.png}
-  \end{center}
-  \vspace{-20pt}
-  \caption{Wykres przyspieszenia}
-  \vspace{-10pt}
-\end{wrapfigure}
-
-
-Wykres przyspieszenia programu testującego liczby pierwsze pokazuje czy i jak udało się zrównoleglić działanie programu. Z tego wykresu możemy wyciągnąć analogiczne wnioski do tych, które zostały opisane pod wykresem zależności czasu wykonania od ilości wątków procesora. Tutaj również widać spadek przyspieszenia od liczby procesów - 5 wzwyż oraz wzrost czasu obliczeń dla liczby procesów powyżej 8. 
+wykres przyspieszenia programu testującego liczby pierwsze pokazuje czy i jak udało się zrównoleglić działanie programu. Pierwszą roznicą widoczna w porownaniu do poprzednich zadań jest rozmiar blokow wykorzystanych do zrownoleglenia programu. W poprzednich zadaniach maksymalna liczba procesorow wynosila 12, w tym przypadku liczba ta wzrasta do 16000. Przyspieszenie uzyskane wynosi ponad 150 co w porownaniu do poprzednich technologii jest porazajaca wartoscia. Wykres
  
-Dane przeprowadzanych testów:
+dane przeprowadzanych testów:
 \begin{lista}
- \item Wzięto pod uwagę średnią pomiarów czasów wykonania programu dla liczby wątków z przedziału od 2 do 13. 
- Program był uruchamiany dla pliku pobranego z internetu.
- \item Do mierzenia czasu wykorzystano MPIWtime.
- \item Testy zostały wykonane na serwerze cuda.iti.pk.edu.pl . 
- \item W czasie testów na serwerze zalogowany był jedynie użytkownik testujący.
+ \item wzięto pod uwagę średnią pomiarów czasów wykonania programu dla liczby wątków z przedziału od 1 do 16384. 
+ program był uruchamiany dla pliku pobranego z internetu.
+ \item do mierzenia czasu wykorzystano zdarzenia CUDA.
+ \item testy zostały wykonane na serwerze cuda.iti.pk.edu.pl . 
+ \item w czasie testów na serwerze zalogowany był jedynie użytkownik testujący.
 \end{lista}
 
 

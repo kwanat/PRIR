@@ -82,12 +82,12 @@ int main(int argc, char** argv) {
     printf("Czas : %f ms\n", elapsedTime);                                      //wypisanie czasu obliczeń
     
 
-       
+    /*   
     for (uint i=0;i<10;i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
         if(result[i].prime==true)
             cout<< result[i].value<<": prime"<<endl;
         else
-            cout<< result[i].value<<": composite"<<endl;   
+            cout<< result[i].value<<": composite"<<endl;  */ 
     cudaFree(tab2);                                                             // zwolnienie pamięci na urządzeniu
     free(result);                                                               // zwolnienie pamięci na hoscie
     return 0;                  
