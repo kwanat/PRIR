@@ -44,7 +44,7 @@ const int mask[5][5] = {            //druga wersja filtru dolnoprzepustowego wyk
     else {
         startForThread = threadIdx.x*threadSize + (columnsNumber+4) % blockDim.x;
     }
-    //Do Calculations
+    //Obliczenia 
     for (row = startForBlock; row < (startForBlock + blockSize); row++) {
         if (row >= rowsNumber) {
             break;
