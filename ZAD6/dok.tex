@@ -55,14 +55,14 @@
 
 \noindent
 \begin{tabular}{|c|p{11cm}|c|} \hline 
-grupa 6 & dariusz szczupak, kamil wanat & \ddmmyyyydate\today \tabularnewline
+Grupa 6 & Dariusz Szczupak, Kamil Wanat & \ddmmyyyydate\today \tabularnewline
 \hline 
 \end{tabular}
 
 
-\section*{zadanie 4 - liczby pierwsze mpi}
+\section*{Zadanie 6 - Liczby pierwsze CUDA}
 
-zadanie laboratoryjne polegało na zaimplementowaniu programu sprawdzającego czy podane liczby są liczbami pierwszymi, czy złożonymi. program zaimplementowany zostaz wykorzystaniem języka programowania CUDA C umozliwiającego programowanie z wykorzystaniem procesorow graficznych GPU. Problem został rozwiązany przy pomocy algorytmu ''naiwnego". Jest to metoda nieco wolniesza niż metody probabilistyczne, jednak dająca zdecydowanie lepsze wyniki. Polega ona na dzieleniu testowanego elementu przez kolejne liczby od 2 do pierwiastka kwadratowego z tejże. w naszym programie podejście naiwne zostało nieco zmodyfikowane. zamiast sprawdzać dzielniki od 2 do pierwiastka z każdej liczby, znajdujemy najpierw liczbę maksymalną, a następnie testujemy wszystkie liczby przy pomocy dzielnikow od 2 do sqrt(max). ponadto nie testujemy każdej liczby osobno dla danego dzielnika, lecz cały zbiór. 
+Zadanie laboratoryjne polegało na zaimplementowaniu programu sprawdzającego czy podane liczby są liczbami pierwszymi, czy złożonymi. Program zaimplementowany został z wykorzystaniem języka programowania CUDA C umożliwiającego programowanie z wykorzystaniem procesorów graficznych GPU. Problem został rozwiązany przy pomocy algorytmu ''naiwnego". Jest to metoda nieco wolniesza niż metody probabilistyczne, jednak dająca zdecydowanie lepsze wyniki. Polega ona na dzieleniu testowanego elementu przez kolejne liczby od 2 do pierwiastka kwadratowego z tejże. W naszym programie podejście naiwne zostało nieco zmodyfikowane. Zamiast sprawdzać dzielniki od 2 do pierwiastka z każdej liczby, znajdujemy najpierw liczbę maksymalną, a następnie testujemy wszystkie liczby przy pomocy dzielników od 2 do sqrt(max). Ponadto nie testujemy każdej liczby osobno dla danego dzielnika, lecz cały zbiór. 
 
 \begin{lstlisting}
 __global__ void primeTesting (number* tab, uint sqr, uint d)         
@@ -79,7 +79,7 @@ for (i=2;i<=sqr;i++) {
 \end{lstlisting}
 
 
-Powyzszy kod przedstawia funkcję primeTesting uruchamianą na procesorze graficznym GPU. Odpowiedzialna jest ona za testowanie pierwszosci liczb. Jako argument przyjmuje wskaźnik do obszaru pamięci w ktorym znajdują się dane liczb do testowania, pierwiastek z wartosci maksymalnej liczby, oraz rozmiar danych. Kazdy z watkow odpowiada za sprawdzenie czesci liczb domniemanie pierwszych. Liczby do sprawdzenia przez wątek definiowane są  poprzez zmienną tid - początkowo przyjmującą numer bloku, oraz zwiększaną o calkowitą ilosć blokow. Na kolejnym listingu widoczny jest fragment kopiowania danych do pamięci karty graficznej, wywolanie funkcji jądra oraz kopiowanie powrotne danych do pamięci hosta.
+Powyższy kod przedstawia funkcję primeTesting uruchamianą na procesorze graficznym GPU. Odpowiedzialna jest ona za testowanie pierwszości liczb. Jako argument przyjmuje wskaźnik do obszaru pamięci w którym znajdują się dane liczb do testowania, pierwiastek z wartości maksymalnej liczby, oraz rozmiar danych. Każdy z wątków odpowiada za sprawdzenie części liczb domniemanie pierwszych. Liczby do sprawdzenia przez wątek definiowane są  poprzez zmienną tid - początkowo przyjmującą numer bloku, oraz zwiększaną o calkowitą ilosć bloków. Na kolejnym listingu widoczny jest fragment kopiowania danych do pamięci karty graficznej, wywołanie funkcji jądra oraz kopiowanie powrotne danych do pamięci hosta.
 
 \begin{lstlisting}
     number* tab2;               
@@ -92,12 +92,12 @@ Powyzszy kod przedstawia funkcję primeTesting uruchamianą na procesorze grafic
     cudaMemcpy(result, tab2, d * sizeof(number), cudaMemcpyDeviceToHost);       
 \end{lstlisting}
 
-Ponizsza tabela przedstawia zaleznoć przyspieszenia od ilosci blokow wykorzystywanych przez program.
+Poniższa tabela przedstawia zalezność przyspieszenia od ilości bloków wykorzystywanych przez program.
 \begin{table}[!hbp]
 \centering
 \begin{tabular}{|p{5cm}|c|}
 \hline 
-Liczba blokow & Przyspieszenie \tabularnewline
+Liczba bloków & Przyspieszenie \tabularnewline
 \hline 
 1	& 1\tabularnewline
 2	& 1,922430365\tabularnewline
@@ -116,7 +116,7 @@ Liczba blokow & Przyspieszenie \tabularnewline
 16384	& 160,7519724\tabularnewline
 \hline
 \end{tabular}
-\caption{Zaleznosć przyspieszenia od ilosci blokow}
+\caption{Zależność przyspieszenia od ilości bloków}
 \end{table}
 
 
@@ -126,7 +126,7 @@ Liczba blokow & Przyspieszenie \tabularnewline
   \includegraphics[width=0.7\textwidth]{wykres.png}
   \caption{wykres przyspieszenia}
 \end{figure}
-wykres przyspieszenia programu testującego liczby pierwsze pokazuje czy i jak udało się zrównoleglić działanie programu. Pierwszą roznicą widoczna w porownaniu do poprzednich zadań jest rozmiar blokow wykorzystanych do zrownoleglenia programu. W poprzednich zadaniach maksymalna liczba procesorow wynosila 12, w tym przypadku liczba ta wzrasta do 16000. Przyspieszenie uzyskane wynosi ponad 150 co w porownaniu do poprzednich technologii jest porazajaca wartoscia. Wykres
+Wykres przyspieszenia programu testującego liczby pierwsze pokazuje czy i jak udało się zrównoleglić działanie programu. Pierwszą różnicą widoczną w porównaniu do poprzednich zadań jest rozmiar bloków wykorzystanych do zrównoleglenia programu. W poprzednich zadaniach maksymalna liczba procesorów wynosila 12, w tym przypadku liczba ta wzrasta do ponad 16000. Przyspieszenie uzyskane wynosi ponad 150 co w porównaniu do poprzednich technologii jest porażającą wartością. Wykres zaczyna spowalniać w okolicach 500 uruchomionych równolegle bloków. Związane to jest z ograniczeniami fizycznymi architektury karty graficznej. Ponadto rozmiar użytych danych ma znaczący wpływ na ilość operacji przeprowadzonych przez dany wątek. Sprowadza się to do sytuacji w której część wywołanych wątków jest bezużyteczna podczas gdy inne nadal pracują. 
  
 dane przeprowadzanych testów:
 \begin{lista}

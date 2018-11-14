@@ -26,7 +26,7 @@ for (i=2;i<=sqr;i++) {			// kolejne liczby od 2 do pierwiastka kwadratowego z na
 }
 
 int main(int argc, char** argv) {
-    int blockNumber=100;      //liczba blokow
+    int blockNumber=1000;      //liczba blokow
     
     ifstream file;  	//plik wejsciowy
     unsigned int maxval=0;  //zmienna przechowująca wartosc maksymalna z testowanego pliku
@@ -39,12 +39,12 @@ int main(int argc, char** argv) {
 
     
 
-    if (argc != 3) {				//sprawdzenie ilosci argumentow podanych przy wywolaniu programu
+    if (argc != 2) {				//sprawdzenie ilosci argumentow podanych przy wywolaniu programu
         cout << "The number of arguments is invalid"<<endl;
         exit(1);
     }
-    blockNumber=atoi(argv[1]);
-    file.open(argv[2]);
+    
+    file.open(argv[1]);
 	if (file.fail()){			//Sprawdzenie poprawnosci otwartego pliku
 		cout<<"Could not open file to read."<<endl;
 		exit(1);
@@ -82,12 +82,12 @@ int main(int argc, char** argv) {
     printf("Czas : %f ms\n", elapsedTime);                                      //wypisanie czasu obliczeń
     
 
-    /*   
-    for (uint i=0;i<10;i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
+       
+    for (uint i=0;i<d;i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
         if(result[i].prime==true)
             cout<< result[i].value<<": prime"<<endl;
         else
-            cout<< result[i].value<<": composite"<<endl;  */ 
+            cout<< result[i].value<<": composite"<<endl;   
     cudaFree(tab2);                                                             // zwolnienie pamięci na urządzeniu
     free(result);                                                               // zwolnienie pamięci na hoscie
     return 0;                  
