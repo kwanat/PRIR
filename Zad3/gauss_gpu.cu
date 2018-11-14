@@ -28,16 +28,16 @@ const int mask[5][5] = {            //druga wersja filtru dolnoprzepustowego wyk
     int SumMask = 52;   //suma liczb w filtrze
     unsigned int row, column, x, y, red, green, blue;
     int  startForBlock, startForThread;
-    //Calculate start position for Block:
-    if (blockIdx.x < (rowsNumber + 4) % gridDim.x) {
-        startForBlock = blockIdx.x * blockSize + blockIdx.x;
+    
+    if (blockIdx.x < (rowsNumber + 4) % gridDim.x) {			//Obliczanie pozycji startowej dla bloku, gridDim podaje liczbe blokow w siatce
+        startForBlock = blockIdx.x * blockSize + blockIdx.x; //blockIdx -indeks bloku w siatce
         blockSize++;
     }
     else {
         startForBlock = blockIdx.x * blockSize + (rowsNumber+4) % gridDim.x;
     }
-    //Calcualte start position for Thread
-    if (threadIdx.x < (columnsNumber + 4) % blockDim.x) {
+
+    if (threadIdx.x < (columnsNumber + 4) % blockDim.x) {		//Obliczanie pozycji startowej dla watku, blockDim podaje liczbę wątków w bloku, w określonym kierunku
         startForThread = threadIdx.x*threadSize + threadIdx.x;
         threadSize++;
     }
@@ -72,48 +72,47 @@ const int mask[5][5] = {            //druga wersja filtru dolnoprzepustowego wyk
  
 int main(int argc, char **argv)
 {
-    int blockNumber = 500; //cuda cores
-    int threadNumber = 1024;
-    int threadsCount; //liczba watkow
+    int blockNumber = 1; //cuda cores
+    int threadNumber = 1000;
     cudaEvent_t start, stop; //deklaracja zmiennych licznika
     float elapsedTime; 
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
+/*
     if (argc != 4) {                //sprawdzenie ilosci argumentow podanych przy wywolaniu programu
         cout << "Niepoprawna liczba oargumentow"<<endl;
         exit(1);
     } 
 
-    threadsCount = atoi(argv[1]);
-    if (threadsCount <= 0 || threadsCount > 15) {
-        cout << "Liczba rdzeni niepoprawna";
+    int threadsCount = atoi(argv[1]);
+    if (threadsCount <= 0) {
+        cout << "Niepoprawna liczba argumentow\n";
         exit(-1);
     }
-
-    blockNumber=threadsCount;
+    blockNumber = threadsCount;
+*/
     //Load and create image
-    char *imgName = argv[2];
-    char *imgOutName = argv[3];
+    char *imgName = argv[1];
+    char *imgOutName = argv[2];
     
     Mat img;
     img = imread(imgName, CV_LOAD_IMAGE_COLOR); // wczytanie obrazu wejsciowego
  
     if (!img.data) {
         cout << "Nie mozna wczytac" << imgName;
-        getchar();
         return -1;
     }
  
-    Mat background[3];   //destination array
-    split(img, background); //split source
+    Mat frame[3];   //destination array - tablica docelowa
+    split(img, frame); //split source - dzielenie na tablice
  
-    //Prepare size of image and fragment sizes:
-    int rows = img.rows;
-    int columns = img.cols;
-    int sizeForBlock = rows / blockNumber;
-    int sizeForThread = columns / threadNumber;
-   //cout << rows << "  " << columns << "  "<< sizeForBlock <<"  "<< sizeForThread  << endl;
+    //Przygotowanie rozmiarów obrazka i rozmiary fragmentów:
+    int rows = img.rows; //liczba wierszy w obrazku
+    int columns = img.cols;	//liczba kolumn w obrazku
+    int sizePerBlock = rows / blockNumber; //rozmiar na blok
+    int sizeForThread = columns / threadNumber; //rozmiar dla wątku
+   //cout << rows << "  " << columns << "  "<< sizePerBlock <<"  "<< sizeForThread  << endl;
  
     //Prepare data to upload
     unsigned char* R;
@@ -124,34 +123,34 @@ int main(int argc, char **argv)
     unsigned char* cudaB;
  
     //Load data on GPU memory
-    cudaMalloc(&cudaR, rows*columns*sizeof(unsigned char));
+    cudaMalloc(&cudaR, rows*columns*sizeof(unsigned char)); //Alokuje pamięć na karcie graficznej.
     cudaMalloc(&R, (rows)*(columns) * sizeof(unsigned char));
-    cudaMemcpy(cudaR, &background[2].data[0], rows*columns * sizeof(unsigned char),cudaMemcpyHostToDevice);
+    cudaMemcpy(cudaR, &frame[2].data[0], rows*columns * sizeof(unsigned char),cudaMemcpyHostToDevice);
     cudaMalloc(&cudaG, rows*columns * sizeof(unsigned char));
     cudaMalloc(&G, (rows)*(columns) * sizeof(unsigned char));
-    cudaMemcpy(cudaG, &background[1].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(cudaG, &frame[1].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
     cudaMalloc(&cudaB, rows*columns * sizeof(unsigned char));
     cudaMalloc(&B, (rows)*(columns ) * sizeof(unsigned char));
-    cudaMemcpy(cudaB, &background[0].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
+    cudaMemcpy(cudaB, &frame[0].data[0], rows*columns * sizeof(unsigned char), cudaMemcpyHostToDevice);
  
     //Do calculations
     cudaEventRecord(start);
-    gaussianBlur <<< blockNumber, threadNumber >>> (cudaR, cudaG, cudaB, R, G, B, sizeForBlock, sizeForThread, rows-4, columns-4); //uruchomienie jądra
+    gaussianBlur <<< blockNumber, threadNumber >>> (cudaR, cudaG, cudaB, R, G, B, sizePerBlock, sizeForThread, rows-4, columns-4); //uruchomienie jądra
     cudaEventRecord(stop); //zatrzymanie licznika i zczytanie czasu obliczen
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    printf("Czas : %f ms\n", elapsedTime);
+    cout << "Czas: " << elapsedTime << " ms\n" << endl;
  
     //Wczytanie rozmytego obrazu z GPU
-    unsigned char* resultBlue;
+    unsigned char* resultBlue; //deklaracja wskaznikow 
     unsigned char* resultRed;
     unsigned char* resultGreen;
  
-    resultBlue = new unsigned char[(rows)*(columns)];
+    resultBlue = new unsigned char[(rows)*(columns)]; //alokacja pamieci dla wskaznikow pikseli
     resultRed = new unsigned char[(rows)*(columns)];
     resultGreen = new unsigned char[(rows)*(columns)];
  
-    cudaMemcpy(resultRed,R,(rows)*(columns) * sizeof(unsigned char),cudaMemcpyDeviceToHost);
+    cudaMemcpy(resultRed,R,(rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost); //kopiowanie miedzy karta a RAM, (1 arg to obszar do ktorego jest kopiowane, drugi to obszar pamieci z ktorego jest kopiowane, rozmiar do skopowania, kierunek transferu)
     cudaMemcpy(resultBlue, B, (rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
     cudaMemcpy(resultGreen, G, (rows)*(columns) * sizeof(unsigned char), cudaMemcpyDeviceToHost);
  
@@ -161,9 +160,9 @@ int main(int argc, char **argv)
     Mat Blue = Mat(rows, columns, CV_8UC1, resultBlue);
     vector<Mat> tab; //tablica do scalenia
  
-    tab.push_back(Blue);
-    tab.push_back(Green);
-    tab.push_back(Red);
+    tab.push_back(Blue); //dodaje do końca tablicy nowy px B
+    tab.push_back(Green); //dodaje do końca tablicy nowy px G
+    tab.push_back(Red); //dodaje do końca tablicy nowy px R
     merge(tab, imgResult); //scalanie 
     imwrite(imgOutName, Mat(imgResult, Rect(0, 0, columns - 4, rows - 4)));
  
@@ -173,8 +172,6 @@ int main(int argc, char **argv)
     cudaFree(&cudaR);
     cudaFree(&cudaB);
     cudaFree(&cudaG);
- 
 
- 
     return 0;
 }
