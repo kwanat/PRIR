@@ -16,20 +16,20 @@ struct number{		//struktura wykorzystywana w wektorze danych - zawiera informacj
     bool prime;
 };
 
-__global__ void primeTesting (vector<number>* tab, uint sqr, uint d)         //Funkcja testująca pierwszoć liczb, przyjmuje jako argumenty zbior do tesowania, pierwiastek do ktorego testujemy oraz wielkosc zbioru testowanego
-{
-uint tid=blockIdx.x;                                                                          //Funkcja zwraca przetestowany zbior
-uint i,j;
+__global__ void primeTesting (number* tab, uint sqr, uint d)         //Funkcja testująca pierwszoć liczb, przyjmuje jako argumenty zbior do tesowania, pierwiastek do ktorego testujemy oraz wielkosc zbioru testowanego
+{    
+int tid=threadIdx.x+blockIdx.x * blockDim.x;                                                                        //Funkcja zwraca przetestowany zbior
+int i,j;
 for (i=2;i<=sqr;i++) {			//petla zrownoleglana - kolejne liczby od 2 do pierwiastka kwadratowego z najwiekszego elementu zbioru wczytywanego
-        for (j = tid; j <d; j+=blockDim.x) {		//petla wewnetrzna sprawdzajaca czy kolejne liczby wektora tab dziela sie przez aktualna wartosc zmiennej i
-                if((tab[j].value%i==0)&(tab[j].value!=i)) //jesli tak liczba uznawana jest za zlozona, dodatkowo sprawdzamy czy liczba nie jest rowna obecnemu dzielnikowi (zasada pierwszosci)
-                    tab[j].prime=false;
+        for (j = tid; j <d; j += blockDim.x * gridDim.x) {		//petla wewnetrzna sprawdzajaca czy kolejne liczby wektora tab dziela sie przez aktualna wartosc zmiennej i
+                if((tab[j].value%i==0)&(tab[j].value<i)) //jesli tak liczba uznawana jest za zlozona, dodatkowo sprawdzamy czy liczba nie jest rowna obecnemu dzielnikowi (zasada pierwszosci)
+                    tab[j].prime=false;    
         }
-    }
+    }                                      
 }
 
 int main(int argc, char** argv) {
-    int blockNumber=1;
+    int blockNumber=1000;
     
     ifstream file;  	//plik wejsciowy
     unsigned int maxval=0;  //zmienna przechowująca wartosc maksymalna z testowanego pliku
@@ -43,11 +43,12 @@ int main(int argc, char** argv) {
 
     
 
-    if (argc != 2) {				//sprawdzenie ilosci argumentow podanych przy wywolaniu programu
+    if (argc != 3) {				//sprawdzenie ilosci argumentow podanych przy wywolaniu programu
         cout << "The number of arguments is invalid"<<endl;
         exit(1);
-    }
-    file.open(argv[1]);
+    }               
+    blockNumber=atoi(argv[1]);
+    file.open(argv[2]);
 	if (file.fail()){			//Sprawdzenie poprawnosci otwartego pliku
 		cout<<"Could not open file to read."<<endl;
 		exit(1);
@@ -67,26 +68,47 @@ int main(int argc, char** argv) {
     uint sqr=sqrt(maxval);			//pierwiastek z liczby maksymalnej
     uint d=tab.size();          //zmienna pomocnicza rozmiar wektora danych
 
-    vector<number>* tab2;
+    number* tab2;
+    number* temp = tab.data();
+        for (uint i=0;i<10;i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
+        if(temp[i].prime==true)
+            cout<<temp[i].value<<": prime"<<endl;
+        else
+            cout<<temp[i].value<<": composite"<<endl;
+            
     error=cudaMalloc( (void**)&tab2, d * sizeof(number) );
-    error = cudaMemcpy(tab2, tab, d * sizeof(number), cudaMemcpyHostToDevice);
+    error = cudaMemcpy(tab2, temp, d * sizeof(number), cudaMemcpyHostToDevice);
     cudaEventRecord(start);
-
+    cout<<d<<endl<<sizeof(tab)<<endl;
     primeTesting <<< blockNumber, 1 >>> (tab2, sqr,d);
 
     cudaEventRecord(stop); //zatrzymanie licznika i zczytanie czasu obliczen
     error = cudaEventSynchronize(stop);
-    vector<number>* reult= new vector<number>();
-    result->reserve( d );
+
+    number * result;
+    result= (number *) malloc (d*sizeof(number));
     error = cudaMemcpy(result, tab2, d * sizeof(number), cudaMemcpyDeviceToHost);
     cudaEventElapsedTime(&elapsedTime, start, stop);
     printf("Czas : %f ms\n", elapsedTime);
-    for (uint i=0;i<(* result).size();i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
-        if((* result)[i].prime==true)
-            cout<<(* result)[i].value<<": prime"<<endl;
+    
+    //cout<<result->size()<<endl;
+    cout<<sizeof(result)<<endl;
+    cout<<sizeof(number)<<endl;
+    cout<<endl<<endl<<result[0].value<<endl;
+       
+    for (uint i=0;i<10;i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
+        if(result[i].prime==true)
+            cout<< result[i].value<<": prime"<<endl;
         else
-            cout<<(* result)[i].value<<": composite"<<endl;
-	                  
+            cout<< result[i].value<<": composite"<<endl;
+                 
+           /*          
+            for (uint i=0;i<10;i++)				//wypisanie liczb z  wektora tab wraz z informacją czy są pierwsze
+        if(tab[i].prime==true)
+            cout<<tab[i].value<<": prime"<<endl;
+        else
+            cout<<tab[i].value<<": composite"<<endl;
+	         */          
     return 0;                  
 
 }
