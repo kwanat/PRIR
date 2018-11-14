@@ -72,14 +72,14 @@ const int mask[5][5] = {            //druga wersja filtru dolnoprzepustowego wyk
  
 int main(int argc, char **argv)
 {
-    int blockNumber = 1; //cuda cores
-    int threadNumber = 1000;
+    int blockNumber; //cuda cores
+    int threadNumber = 1;
     cudaEvent_t start, stop; //deklaracja zmiennych licznika
     float elapsedTime; 
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-/*
+
     if (argc != 4) {                //sprawdzenie ilosci argumentow podanych przy wywolaniu programu
         cout << "Niepoprawna liczba oargumentow"<<endl;
         exit(1);
@@ -91,10 +91,10 @@ int main(int argc, char **argv)
         exit(-1);
     }
     blockNumber = threadsCount;
-*/
+
     //Load and create image
-    char *imgName = argv[1];
-    char *imgOutName = argv[2];
+    char *imgName = argv[2];
+    char *imgOutName = argv[3];
     
     Mat img;
     img = imread(imgName, CV_LOAD_IMAGE_COLOR); // wczytanie obrazu wejsciowego
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     cudaEventRecord(stop); //zatrzymanie licznika i zczytanie czasu obliczen
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Czas: " << elapsedTime << " ms\n" << endl;
+    printf("Czas : %f ms\n", elapsedTime);
  
     //Wczytanie rozmytego obrazu z GPU
     unsigned char* resultBlue; //deklaracja wskaznikow 
